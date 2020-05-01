@@ -1,0 +1,65 @@
+<html>
+<head>
+<title>WebGL</title>
+<script src="m3br.js"></script>
+</head>
+<body>
+
+<canvas width="500" height="400" id="canvas"></canvas>
+<div id="vertexShader">
+  attribute vec4 vertex;
+
+  void main() {
+    gl_Position = vertex;
+  }
+</div>
+<div id="fragmentShader">
+  void main() {
+    gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+  }
+</div>
+<script>
+function getShader(id) {
+  return document.getElementById(id).innerHTML || '';
+}
+
+var gl = new M3br(document.getElementById('canvas'));
+var program = gl.createProgram(
+  gl.createVertexShader(getShader('vertexShader')),
+  gl.createFragmentShader(getShader('fragmentShader'))
+);
+
+gl.setup({
+  clearColor: [1.0, 1.0, 1.0, 1.0],
+  clearDepth: 1.0,
+  clear: {
+    color: true,
+    depth: true
+  }
+});
+gl.clear();
+
+var buffer = gl.createStaticArrayBuffer([
+  -0.4,  0.3,
+   0.2,  0.3,
+   0.2, -0.4,
+  -0.4, -0.6
+]);
+
+var vertexPosition = gl.gl.getAttribLocation(program, 'vertex');
+gl.gl.vertexAttribPointer(
+  vertexPosition,
+  2,
+  gl.gl.FLOAT,
+  false,
+  0,
+  0
+);
+gl.gl.enableVertexAttribArray(vertexPosition);
+gl.gl.useProgram(program);
+
+gl.gl.drawArrays(gl.gl.TRIANGLE_STRIP, 0, 3);
+</script>
+
+</body>
+</html>
