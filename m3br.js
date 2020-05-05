@@ -5,7 +5,7 @@ function M3br (canvas) {
 M3br.Uniform = function (name, program) {
   this.name = name;
   this.program = program;
-  this.location = program.parent.gl.getUniformLocation(program, name);
+  this.location = program.parent.gl.getUniformLocation(program.program, name);
 }
 M3br.Uniform.prototype.setMatrix = function (matrix) {
   var gl = this.program.parent.gl;
@@ -27,7 +27,7 @@ M3br.Attrib = function (name, program) {
   this.enabled = false;
   this.name = name;
   this.program = program;
-  this.location = program.parent.gl.getAttribLocation(program, name);
+  this.location = program.parent.gl.getAttribLocation(program.program, name);
 }
 M3br.Attrib.prototype.setPointer = function (buffer, numComponents, params) {
   var gl = this.program.parent.gl;
@@ -49,6 +49,8 @@ M3br.Attrib.prototype.setPointer = function (buffer, numComponents, params) {
   );
 
   enable && gl.enableVertexAttribArray(this.location);
+
+  return this;
 }
 M3br.Attrib.prototype.enable = function () {
   if (!this.enabled) {
@@ -68,13 +70,18 @@ M3br.Attrib.prototype.disable = function () {
 M3br.Program = function (program, parent) {
   this.program = program;
   this.parent = parent;
-}
+};
 M3br.Program.prototype.getUniform = function (name) {
   return new M3br.Uniform(name, this);
-}
+};
 M3br.Program.prototype.getAttrib = function (name) {
   return new M3br.Attrib(name, this);
-}
+};
+M3br.Program.prototype.use = function () {
+  this.parent.gl.useProgram(this.program);
+
+  return this;
+};
 
 M3br.prototype.createShader = function (source, type) {
   var gl = this.gl;
@@ -176,7 +183,13 @@ M3br.prototype.clear = function (bit) {
   this.gl.clear(bit || this.clearBit);
 }
 
-M3br.prototype.matrix = {
+M3br.prototype.drawArrays = function () {
+  this.gl.drawArrays.apply(this.gl, arguments);
+
+  return this;
+}
+
+M3br.matrix = {
   translate: function (x, y, z) {
     return [
       x, 0, 0, 0,
@@ -258,11 +271,19 @@ M3br.prototype.matrix = {
         result[index] = 0;
 
         for (iterator = 0 ; iterator < size ; ++iterator) {
-          result[index] += last[iterator * size + col] + current[row * size + iterator];
+          result[index] += last[row * size + iterator] * current[iterator * size + col];
         }
       }
     }
 
     return result;
+  },
+
+  rotate: function (x, y, z) {
+    return M3br.matrix.multiply(
+      M3br.matrix.rotateX(x),
+      M3br.matrix.rotateY(y),
+      M3br.matrix.rotateZ(z)
+    );
   }
 }

@@ -9,8 +9,10 @@
 <div id="vertexShader">
   attribute vec4 vertex;
 
+  uniform mat4 rotationX;
+
   void main() {
-    gl_Position = vertex;
+    gl_Position = rotationX * vertex;
   }
 </div>
 <div id="fragmentShader">
@@ -30,7 +32,7 @@ var program = gl.createProgram(
 );
 
 gl.setup({
-  clearColor: [1.0, 1.0, 1.0, 1.0],
+  clearColor: [1.0, 0.0, 0.0, 1.0],
   clearDepth: 1.0,
   clear: {
     color: true,
@@ -40,25 +42,24 @@ gl.setup({
 gl.clear();
 
 var buffer = gl.createStaticArrayBuffer([
-  -0.4,  0.3,
-   0.2,  0.3,
-   0.2, -0.4,
-  -0.4, -0.6
+  -0.5,  0.5, 0.0,
+   0.5,  0.5, 0.1,
+   0.5, -0.5, 0.1,
+  -0.5, -0.5, 0.0,
+  -0.5,  0.5, 0.0
 ]);
 
-var vertexPosition = gl.gl.getAttribLocation(program, 'vertex');
-gl.gl.vertexAttribPointer(
-  vertexPosition,
-  2,
-  gl.gl.FLOAT,
-  false,
-  0,
-  0
+program.getAttrib('vertex').setPointer(buffer, 3);
+program.use();
+program.getUniform('rotationX').setMatrix(
+  M3br.matrix.rotate(
+    0.4 * Math.PI,
+    0.3 * Math.PI,
+    0
+  )
 );
-gl.gl.enableVertexAttribArray(vertexPosition);
-gl.gl.useProgram(program);
 
-gl.gl.drawArrays(gl.gl.TRIANGLE_STRIP, 0, 3);
+gl.drawArrays(gl.gl.TRIANGLE_STRIP, 0, 5);
 </script>
 
 </body>
