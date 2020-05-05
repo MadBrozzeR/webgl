@@ -2,6 +2,80 @@ function M3br (canvas) {
   this.gl = canvas.getContext('webgl');
 }
 
+M3br.Uniform = function (name, program) {
+  this.name = name;
+  this.program = program;
+  this.location = program.parent.gl.getUniformLocation(program, name);
+}
+M3br.Uniform.prototype.setMatrix = function (matrix) {
+  var gl = this.program.parent.gl;
+  var method;
+
+  switch (matrix.length) {
+    case 16: method = gl.uniformMatrix4fv; break;
+    case 9: method = gl.uniformMatrix3fv; break;
+    case 4: method = gl.uniformMatrix2fv; break;
+    default: throw new Error('Matrix size of ' + matrix.length + ' is not supported');
+  }
+
+  method.call(gl, this.location, false, new Float32Array(matrix));
+
+  return this;
+}
+
+M3br.Attrib = function (name, program) {
+  this.enabled = false;
+  this.name = name;
+  this.program = program;
+  this.location = program.parent.gl.getAttribLocation(program, name);
+}
+M3br.Attrib.prototype.setPointer = function (buffer, numComponents, params) {
+  var gl = this.program.parent.gl;
+  params || (params = {});
+  var type = params.type || gl.FLOAT;
+  var normalize = params.normalize || false;
+  var stride = params.stride || 0;
+  var offset = params.offset || 0;
+  var enable = params.enable === undefined ? true : params.enable;
+
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.vertexAttribPointer(
+    this.location,
+    numComponents,
+    type,
+    normalize,
+    stride,
+    offset
+  );
+
+  enable && gl.enableVertexAttribArray(this.location);
+}
+M3br.Attrib.prototype.enable = function () {
+  if (!this.enabled) {
+    this.program.parent.gl.enableVertexAttribArray(this.location);
+  }
+
+  return this;
+}
+M3br.Attrib.prototype.disable = function () {
+  if (this.enabled) {
+    this.program.parent.gl.disableVertexAttribArray(this.location);
+  }
+
+  return this;
+}
+
+M3br.Program = function (program, parent) {
+  this.program = program;
+  this.parent = parent;
+}
+M3br.Program.prototype.getUniform = function (name) {
+  return new M3br.Uniform(name, this);
+}
+M3br.Program.prototype.getAttrib = function (name) {
+  return new M3br.Attrib(name, this);
+}
+
 M3br.prototype.createShader = function (source, type) {
   var gl = this.gl;
   var shader = gl.createShader(type);
@@ -41,7 +115,7 @@ M3br.prototype.createProgram = function () {
     throw new Error(this.gl.getProgramInfoLog(program));
   }
 
-  return program;
+  return new M3br.Program(program, this);
 }
 
 M3br.prototype.createStaticArrayBuffer = function (array) {
@@ -151,5 +225,44 @@ M3br.prototype.matrix = {
       0, -s, c, 0,
       0,  0, 0, 1
     ];
+  },
+
+  multiply: function () {
+    var size = 4;
+    var total = size * size;
+    var index;
+    var ind = {};
+
+    if (arguments.length === 0) {
+      return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
+      ];
+    }
+
+    var result = arguments[0];
+    var last, current;
+    var row, col;
+    var iterator;
+
+    for (var matrix = 1 ; matrix < arguments.length ; ++matrix) {
+      last = result;
+      result = [];
+      current = arguments[matrix];
+
+      for (index = 0 ; index < total ; ++index) {
+        row = Math.floor(index / size);
+        col = index % size;
+        result[index] = 0;
+
+        for (iterator = 0 ; iterator < size ; ++iterator) {
+          result[index] += last[iterator * size + col] + current[row * size + iterator];
+        }
+      }
+    }
+
+    return result;
   }
 }
